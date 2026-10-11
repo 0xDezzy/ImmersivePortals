@@ -116,6 +116,9 @@ public final class MiniatureBaseGameTest {
             helper.assertTrue(!loaded.isAvailable(), "Native computeIfAbsent must quarantine unsupported data, not construct an empty registry");
             helper.assertTrue(!loaded.isDirty(), "Quarantined data must not be scheduled for overwrite");
             disk.save();
+            // Native SavedData writes/cleanup share NeoForge's chained IO worker.
+            // Await the real queue before inspecting bytes, not a guessed delay.
+            net.neoforged.neoforge.common.IOUtilities.waitUntilIOWorkerComplete();
             helper.assertTrue(java.util.Arrays.equals(before, java.nio.file.Files.readAllBytes(file)), "Native save must preserve the original file byte for byte");
             // Also exercise a supported registry through the native disk path.
             var valid = new MiniatureBaseStorage(); UUID owner = UUID.randomUUID();
@@ -128,6 +131,10 @@ public final class MiniatureBaseGameTest {
             loaded = MiniatureBaseStorage.loadFrom(disk, file);
             helper.assertTrue(loaded.isAvailable() && loaded.entries().equals(valid.entries()), "Native disk round-trip must retain supported backing references");
         } finally {
+            // Loading enqueues cleanup too, even when no data is dirty. Join and
+            // reset the native chain before deleting its target directory. If
+            // the worker failed, propagate that failure and retain the files.
+            net.neoforged.neoforge.common.IOUtilities.waitUntilIOWorkerComplete();
             java.nio.file.Files.deleteIfExists(file); java.nio.file.Files.deleteIfExists(directory);
         }
         helper.succeed();

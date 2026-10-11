@@ -317,6 +317,15 @@ class VerificationHarnessTest(unittest.TestCase):
         log.write_text("All 6 required tests passed :)\n", encoding="utf-8")
         verify.validate_gametest_log(log)
 
+    def test_gametest_pass_marker_cannot_hide_async_cleanup_or_shutdown_failure(self):
+        log = self.results / "latest.log"
+        for failure in ("Failed to list temporary files in /tmp/ip-miniature-registry-test-example",
+                        "Exception stopping the server\njava.util.concurrent.CompletionException: java.nio.file.NoSuchFileException"):
+            with self.subTest(failure=failure):
+                log.write_text("All 7 required tests passed :)\n" + failure + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "asynchronous IO or shutdown failure"):
+                    verify.validate_gametest_log(log)
+
     def test_optional_gametest_failure_cannot_pass_core_verification(self):
         log = self.results / "latest.log"
         log.write_text("All 7 required tests passed :)\n3 optional tests failed\n", encoding="utf-8")
