@@ -29,8 +29,10 @@ public final class MiniatureBaseManager {
     }
     /** Rebuild from the single authority after restart or interrupted cross-dimension saves. */
     public static void reconcile(MinecraftServer server) {
+        MiniatureBaseStorage registry = MiniatureBaseStorage.get(server);
+        if (!registry.isAvailable()) return; // Never erase derived faces after a failed authoritative load.
         Map<ServerLevel, List<Portal>> expected = new HashMap<>();
-        for (MiniatureBase base : MiniatureBaseStorage.get(server).entries()) {
+        for (MiniatureBase base : registry.entries()) {
             if (!base.placed()) continue;
             ServerLevel backing = server.getLevel(base.backingDimension());
             ServerLevel exterior = server.getLevel(base.exteriorDimension());

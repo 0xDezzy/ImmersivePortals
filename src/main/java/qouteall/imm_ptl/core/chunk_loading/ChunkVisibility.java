@@ -77,22 +77,23 @@ public class ChunkVisibility {
             predicate
         );
         
+        // The entity-query overflow fallback applies only to ordinary portals.
+        // Global portals are already an explicit persistent set, and six-face
+        // miniature views must not lose destination loaders when nine bases
+        // produce more than 100 faces. Preserve every in-range global portal.
+        if (result.size() > 100) {
+            limitedLogger.err("too many ordinary portals nearby " + world + pos);
+            Portal nearest = result.stream().min(Comparator.comparingDouble(
+                p -> p.getDistanceToNearestPointInPortal(pos))).orElseThrow();
+            result = new java.util.ArrayList<>(List.of(nearest));
+        }
         for (Portal globalPortal : GlobalPortalStorage.getGlobalPortals(world)) {
             double distance = globalPortal.getDistanceToNearestPointInPortal(pos);
-            if (distance < radiusChunksForGlobalPortals * 16) {
+            if (distance < radiusChunksForGlobalPortals * 16 && predicate.test(globalPortal)) {
                 result.add(globalPortal);
             }
         }
-        
-        if (result.size() > 100) {
-            limitedLogger.err("too many portal nearby " + world + pos);
-            
-            Optional<Portal> nearest =
-                result.stream().min(Comparator.comparingDouble(p -> p.getDistanceToNearestPointInPortal(pos)));
-            
-            return List.of(nearest.get());
-        }
-        
+
         return result;
     }
     

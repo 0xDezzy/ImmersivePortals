@@ -46,6 +46,11 @@ class MiniatureBaseTest {
     }
     @Test void futureRegistryVersionFailsInsteadOfSilentlyLosingReferences() {
         CompoundTag tag = new CompoundTag(); tag.putInt("version", 2);
-        assertThrows(IllegalArgumentException.class, () -> MiniatureBaseStorage.load(tag));
+        MiniatureBaseStorage quarantined = MiniatureBaseStorage.load(tag);
+        assertFalse(quarantined.isAvailable());
+        assertThrows(IllegalArgumentException.class, quarantined::entries);
+        assertThrows(IllegalArgumentException.class, () -> quarantined.create(base(2)));
+        assertEquals(tag, quarantined.save(new CompoundTag(), null));
+        assertFalse(quarantined.isDirty());
     }
 }

@@ -57,7 +57,10 @@ rebuildable derived data with deterministic IDs for each placement revision.
 Reconciliation removes stale/duplicate faces and repairs missing ones after a
 restart or an interrupted save, without copying backing contents. If a dimension
 is missing, its reference is retained and its view stays unavailable. Unsupported
-registry versions fail rather than silently discarding references. Ordinary
+registry versions and unreadable existing files quarantine the registry: commands
+and reconciliation stop, and the original data is not overwritten. Minecraft
+otherwise catches saved-data load failures and may call the empty constructor;
+the quarantine explicitly covers that fallback. Ordinary
 Minecraft save durability still applies; this does not provide crash-atomic
 saving of unrelated inventories or bypass backups.
 
@@ -65,7 +68,8 @@ saving of unrelated inventories or bypass backups.
 
 JUnit covers fractional/minimum sizes, invalid input, ownership, placement and
 NBT round-trips. A real GameTest checks all twelve faces, idempotent recovery,
-registry reload, and preservation of the identical chest inventory through
+native disk reload (including unknown-version quarantine), all 32 views retaining
+their destination loaders, and preservation of the identical chest inventory through
 pickup/replacement/restoration. The diagnostic graphical matrix adds a managed
 1:2.5 view of real blocks, including shader/resource reload phases. Existing
 real-pack lanes remain regression coverage; they do not yet establish miniature
@@ -92,3 +96,5 @@ Relevant source references:
 - [Sable Scale candidate, inspected commit 2cb9b88](https://github.com/falling-colud/sable-scale/tree/2cb9b8859ac7c7ac1bd22bf45fa79c48fe0ddff1)
 
 Sable Scale is a candidate, not a verified compatible dependency in this PR.
+
+Native persistence reference: [Minecraft 1.21.1 DimensionDataStorage](https://github.com/UpperMoon0/MC-Modding-Src/blob/2474fa0c367e1393f805dc6157dae207626e9387/1.21.1/net/minecraft/world/level/storage/DimensionDataStorage.java).
