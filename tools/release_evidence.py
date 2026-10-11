@@ -5,6 +5,7 @@ selected, a missing/corrupt download fails publication instead of accepting it.
 """
 import argparse
 from collections import Counter
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -58,6 +59,16 @@ def required_jobs() -> list[str]:
     return json.loads((ROOT / "tools/ci-coverage.json").read_text())
 
 
+def api_timestamp(record: dict, field: str) -> datetime:
+    value = record.get(field)
+    if not isinstance(value, str):
+        raise ValueError(f"Missing release evidence timestamp: {field}")
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError(f"Release evidence timestamp has no timezone: {field}")
+    return parsed
+
+
 def validate_run(run: dict, jobs: list[dict], artifacts: list[dict], repository: str, commit: str) -> dict:
     expected = dict(status="completed", conclusion="success", event="push", head_branch="main",
                     head_sha=commit)
@@ -71,14 +82,25 @@ def validate_run(run: dict, jobs: list[dict], artifacts: list[dict], repository:
     if run.get("head_repository", {}).get("full_name") != repository:
         raise ValueError("CI head repository does not match the release repository")
     attempt = run["run_attempt"]
+    attempt_started = api_timestamp(run, "run_started_at")
     if Counter(job["name"] for job in jobs) != Counter(required_jobs()):
         raise ValueError("CI coverage is missing, duplicated, or differs from the required matrix")
     if any(job.get("status") != "completed" or job.get("conclusion") != "success"
            or job.get("run_attempt") != attempt or job.get("head_sha") != commit for job in jobs):
         raise ValueError("Every required check must pass on the same commit and run attempt")
+    # GitHub relabels inherited successes with the new run_attempt after a
+    # failed-job-only retry. Their real start times still precede that attempt.
+    # Such a mixed execution is ineligible for reuse; verify the release afresh.
+    for job in jobs:
+        started = api_timestamp(job, "started_at")
+        completed = api_timestamp(job, "completed_at")
+        if started < attempt_started or completed < started:
+            raise ValueError("CI contains inherited or invalid job execution times; full verification is required")
     matches = [artifact for artifact in artifacts if artifact.get("name") == ARTIFACT]
     if len(matches) != 1 or matches[0].get("expired") is not False:
         raise ValueError("Verified main release bundle is unavailable or expired")
+    if api_timestamp(matches[0], "created_at") < attempt_started:
+        raise ValueError("Release bundle predates the current CI attempt")
     origin = matches[0].get("workflow_run", {})
     if origin.get("id") != run["id"] or origin.get("head_sha") != commit:
         raise ValueError("Artifact origin does not match the verified CI run")
