@@ -138,6 +138,7 @@ public class PortalCommand {
         registerEulerCommands(euler);
         builder.then(euler);
         
+        qouteall.imm_ptl.peripheral.miniature.MiniatureBaseCommand.register(builder);
         dispatcher.register(builder);
     }
     

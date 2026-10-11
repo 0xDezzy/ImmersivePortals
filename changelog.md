@@ -6,6 +6,21 @@ and this project tries to adhere to [Semantic Versioning](https://semver.org/spe
 
 ## [Unreleased Changes]
 
+## [6.1.0] - 2026-10-11
+
+### Added
+
+- Add an opt-in operator prototype for stationary miniature views of existing buildings, with owner-controlled create/list/pickup/place/restore commands and fractional scale divisors from 2 to 32.
+- Persist backing references without copying, moving or deleting blocks, inventories or occupants; repair missing portal faces and quarantine invalid registry data.
+- Add lifecycle, native persistence, 32-view chunk-loading and diagnostic renderer regressions.
+
+### Fixed
+
+- Preserve every in-range global portal's destination loader when ordinary portal entity queries exceed their overflow threshold.
+- Await NeoForge saved-data IO before test-fixture cleanup and reject asynchronous cleanup/shutdown errors after GameTest success.
+
+This is the first, stationary prototype milestone of issue #24. There is no physical anchor item, automatic building relocation, moving Sable miniature, or scale-changing Sable handoff. See [miniature base usage and limitations](docs/miniature-bases.md).
+
 ## [6.0.13] - 2026-10-09
 
 ### Fixed

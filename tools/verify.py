@@ -285,6 +285,10 @@ def validate_gametest_log(path: Path = GAMETEST_LOG) -> None:
         raise RuntimeError("NeoForge GameTest server did not report that all required tests passed")
     if re.search(r"\b[1-9]\d* optional tests failed\b", content):
         raise RuntimeError("NeoForge GameTest server reported optional test failures")
+    # A successful GameTest marker/process exit can precede failed asynchronous
+    # SavedData cleanup during shutdown. Those are real fixture/runtime failures.
+    if "Failed to list temporary files in" in content or "Exception stopping the server" in content:
+        raise RuntimeError("NeoForge GameTest server reported asynchronous IO or shutdown failure")
 
 
 def invalidate_generated_run_classpath(run_name: str) -> None:
@@ -419,6 +423,8 @@ def pinned_shaderpack_profile(sha256: str) -> str | None:
 def visual_scene_names(renderer: str, render_mode: str = "normal", diagnostic_fixture: bool = True) -> set[str]:
     scenes = {"solid-visible", "solid-clipped", "mirror", "create-visible", "create-clipped",
               "create-crumbling-clean", "create-crumbling-damaged", "create-crumbling-restored", "create-crumbling-clipped"}
+    if diagnostic_fixture:
+        scenes.add("miniature-visible")
     if render_mode == "normal":
         scenes.update(("nested", "create-nested"))
     if renderer in ACTIVE_RENDERERS and not diagnostic_fixture:

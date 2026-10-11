@@ -68,6 +68,11 @@ public final class PortalSmokeServer {
             PortalSmokeSupport.write("scene-ready.txt", token);
             return;
         }
+        var miniatureRegistry = qouteall.imm_ptl.peripheral.miniature.MiniatureBaseStorage.get(player.server);
+        if (miniatureRegistry.entries().stream().anyMatch(base -> base.name().equals("visual_fixture"))) {
+            miniatureRegistry.remove("visual_fixture", player.getUUID());
+            qouteall.imm_ptl.peripheral.miniature.MiniatureBaseManager.reconcile(player.server);
+        }
         fixtureGeneration++;
         fixtures.forEach(Entity::discard);
         fixtures.clear();
@@ -105,7 +110,14 @@ public final class PortalSmokeServer {
         boolean visible = scene.endsWith("-visible");
         boolean background = scene.endsWith("-background");
         int z = visible ? -1 : 1;
-        if (scene.startsWith("mirror")) {
+        if (scene.equals("miniature-visible")) {
+            var base = new qouteall.imm_ptl.peripheral.miniature.MiniatureBase("visual_fixture", player.getUUID(),
+                Level.NETHER, new AABB(-8, 74, -16, 8, 90, 0), Level.OVERWORLD,
+                new Vec3(0, 78.8, -3.2), 2.5, true, java.util.UUID.randomUUID());
+            miniatureRegistry.create(base);
+            qouteall.imm_ptl.peripheral.miniature.MiniatureBaseManager.reconcile(player.server);
+            wall(target, -1, Blocks.RED_CONCRETE.defaultBlockState());
+        } else if (scene.startsWith("mirror")) {
             if (!background && !visible) wall(source, PortalSmokeMirrorGeometry.excludedWallZ(), Blocks.RED_CONCRETE.defaultBlockState());
             wall(source, 6, (visible ? Blocks.RED_CONCRETE : Blocks.LIME_CONCRETE).defaultBlockState());
             Mirror mirror = Mirror.ENTITY_TYPE.create(source);
