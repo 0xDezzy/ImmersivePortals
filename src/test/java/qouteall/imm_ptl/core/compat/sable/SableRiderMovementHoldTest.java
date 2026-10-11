@@ -62,6 +62,24 @@ class SableRiderMovementHoldTest {
         assertTrue(hold.completed());
         assertFalse(hold.shouldHold(player, null, "destination"));
     }
+    @Test void completedMovementRetainsTheBoundedProtocolLifetime() {
+        var hold = hold();
+        assertTrue(hold.shouldHold(player, null, "source"));
+        assertFalse(hold.shouldHold(player, seat, "destination"));
+        assertTrue(hold.completed());
+        assertFalse(hold.expired());
+        for (int i = 0; i < 100; i++) hold.tick();
+        assertTrue(hold.expired());
+        assertFalse(hold.shouldHold(player, null, "destination"));
+    }
+    @Test void completedMovementStillInvalidatesAnUnrelatedTeleport() {
+        var hold = hold();
+        assertFalse(hold.shouldHold(player, seat, "destination"));
+        assertTrue(hold.completed());
+        assertFalse(hold.shouldHold(player, null, "third dimension"));
+        assertTrue(hold.invalidated());
+        assertFalse(hold.shouldHold(player, null, "destination"));
+    }
     @Test void timeoutReleasesAtTheExistingLimitAndCannotRearm() {
         var hold = hold();
         for (int i = 0; i < 100; i++) { assertTrue(hold.shouldHold(player, null, "source")); hold.tick(); }

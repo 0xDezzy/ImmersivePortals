@@ -101,7 +101,6 @@ public final class SableServerFirstClientHandoff {
             clearClientPendingGate(player);
             return false;
         }
-        if (movementHold.completed()) clearMovementHold();
         return hold;
     }
 

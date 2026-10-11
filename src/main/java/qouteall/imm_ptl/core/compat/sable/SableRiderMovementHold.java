@@ -32,10 +32,12 @@ public final class SableRiderMovementHold {
             cancel();
             return false;
         }
+        // Movement completion is not protocol completion: keep observing lifecycle and time
+        // until the terminal Ack/cancel, without ever holding a subsequent dismount.
+        if (completed) return false;
         if (currentVehicle != null) {
             if (detached || destinationDimension.equals(dimension)) {
                 completed = true;
-                cancel();
             }
             return false;
         }
