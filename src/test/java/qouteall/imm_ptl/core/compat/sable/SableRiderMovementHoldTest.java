@@ -17,12 +17,50 @@ class SableRiderMovementHoldTest {
         assertTrue(hold.shouldHold(player, null, "destination"));
         assertFalse(hold.shouldHold(player, seat, "destination"));
     }
-    @Test void onlyTheCapturedDetachedPlayerInTheTwoCorrelatedFramesIsHeld() {
+    @Test void initialSourceMountDoesNotConsumeTheHandoff() {
         var hold = hold();
-        assertFalse(hold.shouldHold(UUID.randomUUID(), null, "source"));
-        assertFalse(hold.shouldHold(player, UUID.randomUUID(), "source"));
-        assertFalse(hold.shouldHold(player, null, "unrelated teleport"));
+        assertFalse(hold.shouldHold(player, seat, "source"));
+        assertTrue(hold.shouldHold(player, null, "source"));
         assertFalse(new SableRiderMovementHold(player, null, "source", "destination", 100).shouldHold(player, null, "source"));
+    }
+    @Test void unrelatedTeleportPermanentlyInvalidatesRatherThanRearming() {
+        var hold = hold();
+        assertTrue(hold.shouldHold(player, null, "source"));
+        assertFalse(hold.shouldHold(player, null, "third dimension"));
+        assertTrue(hold.invalidated());
+        assertFalse(hold.shouldHold(player, null, "source"));
+        assertFalse(hold.shouldHold(player, null, "destination"));
+    }
+    @Test void respawnWithTheSameUuidCannotInheritTheOldPlayersHold() {
+        var hold = hold();
+        UUID replacement = UUID.fromString(player.toString());
+        assertEquals(player, replacement);
+        assertNotSame(player, replacement);
+        assertFalse(hold.shouldHold(replacement, null, "source"));
+        assertTrue(hold.invalidated());
+        assertFalse(hold.shouldHold(player, null, "source"));
+    }
+    @Test void unrelatedSeatPermanentlyInvalidatesTheHandoff() {
+        var hold = hold();
+        assertFalse(hold.shouldHold(player, UUID.randomUUID(), "source"));
+        assertTrue(hold.invalidated());
+        assertFalse(hold.shouldHold(player, null, "source"));
+    }
+    @Test void reattachmentThenDismountCannotRearmTheHold() {
+        for (String dimension : new String[] {"source", "destination"}) {
+            var hold = hold();
+            assertTrue(hold.shouldHold(player, null, "source"));
+            assertFalse(hold.shouldHold(player, seat, dimension));
+            assertTrue(hold.completed());
+            assertFalse(hold.invalidated());
+            assertFalse(hold.shouldHold(player, null, dimension));
+        }
+    }
+    @Test void destinationMountCompletesEvenIfDetachmentWasBetweenObservations() {
+        var hold = hold();
+        assertFalse(hold.shouldHold(player, seat, "destination"));
+        assertTrue(hold.completed());
+        assertFalse(hold.shouldHold(player, null, "destination"));
     }
     @Test void timeoutReleasesAtTheExistingLimitAndCannotRearm() {
         var hold = hold();

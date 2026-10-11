@@ -86,13 +86,23 @@ public final class SableServerFirstClientHandoff {
 
     private static void startMovementHold(LocalPlayer player, RiderIdentity rider, ResourceKey<Level> destination) {
         if (movementHold != null) movementHold.cancel();
-        movementHold = new SableRiderMovementHold(player.getUUID(), rider.vehicleId(),
+        movementHold = rider.vehicleId() == null ? null : new SableRiderMovementHold(player, rider.vehicleId(),
             rider.sourceDimension(), destination, RIDER_SYNC_TIMEOUT_TICKS);
     }
 
     public static boolean shouldHoldDetachedMovement(LocalPlayer player) {
-        return movementHold != null && movementHold.shouldHold(player.getUUID(),
+        if (movementHold == null) return false;
+        boolean hold = movementHold.shouldHold(player,
             player.getVehicle() == null ? null : player.getVehicle().getUUID(), player.level().dimension());
+        if (movementHold.invalidated() || !player.isAlive()) {
+            // Respawns replace LocalPlayer, whereas IP's correlated dimension transfer retains
+            // that instance. An unrelated player/frame/seat must also release portal gating.
+            clear();
+            clearClientPendingGate(player);
+            return false;
+        }
+        if (movementHold.completed()) clearMovementHold();
+        return hold;
     }
 
     /**
@@ -226,6 +236,8 @@ public final class SableServerFirstClientHandoff {
             clear();
             return;
         }
+        // Mounted players need lifecycle observation too: aiStep may not execute while riding.
+        shouldHoldDetachedMovement(player);
         if (movementHold != null) {
             movementHold.tick();
             if (movementHold.expired()) {
