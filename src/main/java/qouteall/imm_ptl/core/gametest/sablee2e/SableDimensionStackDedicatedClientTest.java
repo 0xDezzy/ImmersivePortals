@@ -65,6 +65,7 @@ public final class SableDimensionStackDedicatedClientTest {
     private static double remoteSourceX = Double.NaN;
     private static float sourceWorldYaw;
     private static boolean movementHoldProbeComplete;
+    private static boolean movementHoldProbeRemounted;
     private static Entity movementHoldProbeSeat;
     private static net.minecraft.world.phys.Vec3 movementHoldProbePosition;
     private static final int MOVEMENT_HOLD_PROBE_TICKS = 40;
@@ -184,16 +185,29 @@ public final class SableDimensionStackDedicatedClientTest {
 
     private static void verifyMovementHoldProbe(Minecraft minecraft) {
         require(minecraft.level.dimension().equals(Level.OVERWORLD), "Movement hold probe changed dimension");
-        require(minecraft.player.getVehicle() == null, "Movement hold probe reattached prematurely");
-        require(SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Captured rider movement hold was inactive");
-        require(minecraft.player.position().distanceTo(movementHoldProbePosition) < 0.01,
-            "Detached rider fell or moved while awaiting acknowledgement: start=" + movementHoldProbePosition
-                + " current=" + minecraft.player.position() + " ticks=" + phaseTicks);
-        if (phaseTicks < MOVEMENT_HOLD_PROBE_TICKS) return;
-        SableServerFirstClientHandoff.clear();
-        require(!SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Cancelled probe retained movement hold");
-        require(movementHoldProbeSeat != null && movementHoldProbeSeat.isAlive()
-            && minecraft.player.startRiding(movementHoldProbeSeat, true), "Cannot restore the original source seat after probe");
+        if (!movementHoldProbeRemounted) {
+            require(minecraft.player.getVehicle() == null, "Movement hold probe reattached prematurely");
+            require(SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Captured rider movement hold was inactive");
+            require(minecraft.player.position().distanceTo(movementHoldProbePosition) < 0.01,
+                "Detached rider fell or moved while awaiting acknowledgement: start=" + movementHoldProbePosition
+                    + " current=" + minecraft.player.position() + " ticks=" + phaseTicks);
+            if (phaseTicks < MOVEMENT_HOLD_PROBE_TICKS) return;
+            require(movementHoldProbeSeat != null && movementHoldProbeSeat.isAlive()
+                && minecraft.player.startRiding(movementHoldProbeSeat, true), "Cannot restore the original source seat after probe");
+            movementHoldProbeRemounted = true;
+            require(!SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Reattached probe retained movement hold");
+            require(SableServerFirstClientHandoff.getActiveHandoffSnapshot() != null, "Reattachment prematurely discarded pending Ack state");
+            return;
+        }
+        require(minecraft.player.getVehicle() == movementHoldProbeSeat, "Probe lost the restored source seat");
+        require(!SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Completed movement hold rearmed");
+        if (SableServerFirstClientHandoff.getActiveHandoffSnapshot() != null) {
+            require(phaseTicks <= 100, "Reattachment discarded the pending handoff timeout");
+            return;
+        }
+        // The existing 100-tick lifetime must clear missing-Ack state even after movement
+        // resumes. One tick of event-listener ordering is allowed, not an extended timeout.
+        require(phaseTicks >= 99 && phaseTicks <= 101, "Pending handoff ended outside its existing lifetime: " + phaseTicks);
         movementHoldProbeComplete = true;
         SableDimensionStackIntegrationMarkers.acknowledge("movement-hold");
         phase = Phase.WAIT_FOR_SOURCE_RIDE;
