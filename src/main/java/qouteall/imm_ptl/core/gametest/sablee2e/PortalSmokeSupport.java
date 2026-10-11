@@ -23,6 +23,7 @@ final class PortalSmokeSupport {
         var result = new java.util.ArrayList<String>();
         if (references) result.add("solid-background");
         result.addAll(List.of("solid-visible", "solid-clipped"));
+        if (diagnosticFixture()) result.add("miniature-visible");
         if (activeShaders() && diagnosticFixture()) {
             for (String program : List.of("cutout", "translucent", "entity", "block-entity", "particle")) {
                 result.add(program + "-visible");

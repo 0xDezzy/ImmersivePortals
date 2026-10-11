@@ -99,7 +99,8 @@ public class ChunkVisibility {
     private static ChunkLoader getGeneralDirectPortalLoader(
         ServerPlayer player, Portal portal
     ) {
-        if (portal.getIsGlobal()) {
+        // Scaled global views need the same destination-size-aware loader as normal scaled portals.
+        if (portal.getIsGlobal() && !portal.hasScaling()) {
             int renderDistance = Math.min(
                 IPGlobal.indirectLoadingRadiusCap * 2,
                 //load a little more to make dimension stack more complete

@@ -419,6 +419,8 @@ def pinned_shaderpack_profile(sha256: str) -> str | None:
 def visual_scene_names(renderer: str, render_mode: str = "normal", diagnostic_fixture: bool = True) -> set[str]:
     scenes = {"solid-visible", "solid-clipped", "mirror", "create-visible", "create-clipped",
               "create-crumbling-clean", "create-crumbling-damaged", "create-crumbling-restored", "create-crumbling-clipped"}
+    if diagnostic_fixture:
+        scenes.add("miniature-visible")
     if render_mode == "normal":
         scenes.update(("nested", "create-nested"))
     if renderer in ACTIVE_RENDERERS and not diagnostic_fixture:

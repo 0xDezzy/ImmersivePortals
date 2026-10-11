@@ -390,7 +390,7 @@ class VerificationHarnessTest(unittest.TestCase):
             self.assertIn("enableShaders=false", (client / "config/oculus.properties").read_text())
 
     def shader_evidence(self, active=True):
-        scenes = {"solid-visible", "solid-clipped", "nested", "create-nested", "mirror", "create-visible", "create-clipped", "create-crumbling-clean", "create-crumbling-damaged", "create-crumbling-restored", "create-crumbling-clipped"}
+        scenes = {"miniature-visible", "solid-visible", "solid-clipped", "nested", "create-nested", "mirror", "create-visible", "create-clipped", "create-crumbling-clean", "create-crumbling-damaged", "create-crumbling-restored", "create-crumbling-clipped"}
         phases = ["before-reload", "after-reload"]
         if active:
             phases.append("after-toggle")

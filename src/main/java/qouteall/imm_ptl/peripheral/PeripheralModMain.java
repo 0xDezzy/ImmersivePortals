@@ -52,6 +52,7 @@ public class PeripheralModMain {
     }
     
     public static void init() {
+        qouteall.imm_ptl.peripheral.miniature.MiniatureBaseManager.init();
         FormulaGenerator.init();
         
         IntrinsicPortalGeneration.init();
