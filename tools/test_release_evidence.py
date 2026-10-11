@@ -18,12 +18,12 @@ class ReleaseEvidenceTest(unittest.TestCase):
     def setUp(self):
         self.repo = "UpperMoon0/ImmersivePortals"
         self.commit = "a" * 40
-        self.run = dict(id=123, run_attempt=2, status="completed", conclusion="success", event="push",
+        self.run = dict(id=123, run_attempt=2, run_started_at="2026-10-11T15:41:53Z", status="completed", conclusion="success", event="push",
                         head_branch="main", head_sha=self.commit, path=".github/workflows/ci.yml",
                         repository={"full_name": self.repo}, head_repository={"full_name": self.repo})
-        self.jobs = [dict(name=name, status="completed", conclusion="success", run_attempt=2,
+        self.jobs = [dict(name=name, started_at="2026-10-11T15:42:00Z", completed_at="2026-10-11T15:45:00Z", status="completed", conclusion="success", run_attempt=2,
                           head_sha=self.commit) for name in evidence.required_jobs()]
-        self.artifacts = [dict(id=456, name=evidence.ARTIFACT, expired=False,
+        self.artifacts = [dict(id=456, created_at="2026-10-11T15:44:00Z", name=evidence.ARTIFACT, expired=False,
                                workflow_run={"id": 123, "head_sha": self.commit})]
 
     def validate(self):
@@ -86,6 +86,43 @@ class ReleaseEvidenceTest(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         self.validate()
                     job[key] = old
+
+    def test_failed_only_retry_relabeling_cannot_reuse_an_earlier_bundle(self):
+        # Actual GitHub shape from CI 38149170740: attempt 2 still reports its
+        # inherited Core job as run_attempt=2, with attempt-1 timestamps.
+        core = next(job for job in self.jobs if job["name"] == "Core verification")
+        core.update(started_at="2026-10-11T14:55:48Z", completed_at="2026-10-11T14:58:28Z")
+        with self.assertRaisesRegex(ValueError, "inherited"):
+            self.validate()
+        with patch.object(evidence, "api", return_value=self.run), \
+             patch.object(evidence, "pages", side_effect=[self.jobs, self.artifacts]):
+            self.assertEqual(evidence.resolve(self.repo, self.commit, "123"), {"reuse": "false"})
+
+    def test_any_inherited_job_or_old_artifact_requires_fresh_verification(self):
+        for job in self.jobs:
+            with self.subTest(job=job["name"]):
+                original = job["started_at"]
+                job["started_at"] = "2026-10-11T15:41:52Z"
+                with self.assertRaisesRegex(ValueError, "inherited"):
+                    self.validate()
+                job["started_at"] = original
+        self.artifacts[0]["created_at"] = "2026-10-11T14:58:01Z"
+        with self.assertRaisesRegex(ValueError, "predates"):
+            self.validate()
+
+    def test_missing_malformed_naive_and_reversed_times_reject_reuse(self):
+        for record, field in ((self.run, "run_started_at"), (self.jobs[0], "started_at"),
+                              (self.jobs[0], "completed_at"), (self.artifacts[0], "created_at")):
+            for invalid in (None, 123, "not-a-time", "2026-10-11T15:44:00"):
+                with self.subTest(field=field, invalid=invalid):
+                    original = record[field]
+                    record[field] = invalid
+                    with self.assertRaises(ValueError):
+                        self.validate()
+                    record[field] = original
+        self.jobs[0]["completed_at"] = "2026-10-11T15:41:59Z"
+        with self.assertRaisesRegex(ValueError, "invalid job execution times"):
+            self.validate()
 
     def test_expired_missing_ambiguous_or_foreign_artifact_rejects_reuse(self):
         original = copy.deepcopy(self.artifacts[0])
