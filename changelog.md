@@ -6,6 +6,8 @@ and this project tries to adhere to [Semantic Versioning](https://semver.org/spe
 
 ## [Unreleased Changes]
 
+- Hold local movement prediction for a bounded, captured Sable rider while detach, authoritative dimension and seat-attachment packets are in flight; prevent client free-fall during a delayed handoff without loosening continuity assertions. Add a deterministic 40-tick native detached-rider probe to both UDP and TCP E2E lanes.
+
 ## [6.1.0] - 2026-10-11
 
 ### Added

@@ -38,6 +38,7 @@ public final class SableDimensionStackDedicatedClientTest {
     private enum Phase {
         CONNECT,
         WAIT_FOR_SOURCE_RIDE,
+        WAIT_FOR_MOVEMENT_HOLD_PROBE,
         WAIT_FOR_DESTINATION_RIDE,
         WAIT_FOR_RETURN_RIDE,
         WAIT_FOR_GRAVITY_RECROSS,
@@ -63,6 +64,10 @@ public final class SableDimensionStackDedicatedClientTest {
     private static ResourceKey<Level> lastObservedDimension;
     private static double remoteSourceX = Double.NaN;
     private static float sourceWorldYaw;
+    private static boolean movementHoldProbeComplete;
+    private static Entity movementHoldProbeSeat;
+    private static net.minecraft.world.phys.Vec3 movementHoldProbePosition;
+    private static final int MOVEMENT_HOLD_PROBE_TICKS = 40;
 
     private SableDimensionStackDedicatedClientTest() {}
 
@@ -93,6 +98,7 @@ public final class SableDimensionStackDedicatedClientTest {
 
             switch (phase) {
                 case WAIT_FOR_SOURCE_RIDE -> waitForSourceRide(minecraft);
+                case WAIT_FOR_MOVEMENT_HOLD_PROBE -> verifyMovementHoldProbe(minecraft);
                 case WAIT_FOR_DESTINATION_RIDE -> waitForDestinationRide(minecraft);
                 case WAIT_FOR_RETURN_RIDE -> waitForReturnRide(minecraft);
                 case WAIT_FOR_GRAVITY_RECROSS -> waitForGravityRecross(minecraft);
@@ -113,7 +119,7 @@ public final class SableDimensionStackDedicatedClientTest {
             case WAIT_FOR_SOURCE_RIDE, WAIT_FOR_DESTINATION_RIDE,
                  WAIT_FOR_RETURN_RIDE, WAIT_FOR_GRAVITY_RECROSS,
                  WAIT_FOR_DISMOUNT -> true;
-            case CONNECT, WAIT_FOR_REMOTE_SOURCE, WAIT_FOR_REMOTE_MOVEMENT,
+            case CONNECT, WAIT_FOR_MOVEMENT_HOLD_PROBE, WAIT_FOR_REMOTE_SOURCE, WAIT_FOR_REMOTE_MOVEMENT,
                  WAIT_FOR_SERVER_PASS, DONE -> false;
         };
     }
@@ -156,8 +162,41 @@ public final class SableDimensionStackDedicatedClientTest {
         remoteSourceX = Double.NaN;
         verifyContinuousClientOwnership(minecraft);
 
+        if (!movementHoldProbeComplete) {
+            // The server holds the real source body until client-source is published.
+            // Reproduce the packet gap deterministically: capture its actual seat/portal,
+            // detach locally, and let forty normal client ticks run without a terminal Ack.
+            // No synthetic server move or actual handoff request is sent by this probe.
+            var portal = qouteall.imm_ptl.core.portal.global_portals.GlobalPortalStorage.getGlobalPortals(minecraft.level)
+                .stream().filter(p -> p.getDestDim().equals(Level.NETHER)).findFirst().orElseThrow();
+            SableServerFirstClientHandoff.begin(portal);
+            movementHoldProbeSeat = vehicle;
+            minecraft.player.stopRiding();
+            movementHoldProbePosition = minecraft.player.position();
+            phase = Phase.WAIT_FOR_MOVEMENT_HOLD_PROBE;
+            phaseTicks = 0;
+            return;
+        }
         SableDimensionStackIntegrationMarkers.acknowledge("source");
         phase = Phase.WAIT_FOR_DESTINATION_RIDE;
+        phaseTicks = 0;
+    }
+
+    private static void verifyMovementHoldProbe(Minecraft minecraft) {
+        require(minecraft.level.dimension().equals(Level.OVERWORLD), "Movement hold probe changed dimension");
+        require(minecraft.player.getVehicle() == null, "Movement hold probe reattached prematurely");
+        require(SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Captured rider movement hold was inactive");
+        require(minecraft.player.position().distanceTo(movementHoldProbePosition) < 0.01,
+            "Detached rider fell or moved while awaiting acknowledgement: start=" + movementHoldProbePosition
+                + " current=" + minecraft.player.position() + " ticks=" + phaseTicks);
+        if (phaseTicks < MOVEMENT_HOLD_PROBE_TICKS) return;
+        SableServerFirstClientHandoff.clear();
+        require(!SableServerFirstClientHandoff.shouldHoldDetachedMovement(minecraft.player), "Cancelled probe retained movement hold");
+        require(movementHoldProbeSeat != null && movementHoldProbeSeat.isAlive()
+            && minecraft.player.startRiding(movementHoldProbeSeat, true), "Cannot restore the original source seat after probe");
+        movementHoldProbeComplete = true;
+        SableDimensionStackIntegrationMarkers.acknowledge("movement-hold");
+        phase = Phase.WAIT_FOR_SOURCE_RIDE;
         phaseTicks = 0;
     }
 

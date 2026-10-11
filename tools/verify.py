@@ -897,7 +897,7 @@ def validate_results(client_exit: int, smoke: bool = False) -> None:
     if client_exit != 0:
         raise RuntimeError(f"graphical client exited with status {client_exit}")
     required = ("server-pass", "client-pass", "visual-pass") if smoke else (
-        "server-pass", "client-pass", "client-source", "client-destination", "client-return", "client-recross", "client-dismount")
+        "server-pass", "client-pass", "client-source", "client-destination", "client-return", "client-recross", "client-dismount", "client-movement-hold")
     for name in required:
         marker = RESULT_DIR / f"{name}.txt"
         if not marker.exists() or not marker.read_text(encoding="utf-8").strip():
