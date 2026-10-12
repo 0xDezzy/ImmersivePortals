@@ -164,6 +164,7 @@ class FabricReceiverRegistrationTest {
         assertThrows(IllegalStateException.class, () -> FabricReceiverRegistration.register(map, () -> { throw new IllegalStateException(); }));
         assertTrue(FabricReceiverRegistration.register(map, () -> true));
         assertDoesNotThrow(() -> FabricReceiverRegistration.checkVersion("4.2.2+a92978fd19"));
+        assertDoesNotThrow(() -> FabricReceiverRegistration.checkVersion("4.3.1+30a980d919"));
         for (String version : List.of("4.2.3", "4.2.2+unknown", "4.3.1", ""))
             assertThrows(IllegalStateException.class, () -> FabricReceiverRegistration.checkVersion(version));
     }

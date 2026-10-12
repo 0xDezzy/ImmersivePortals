@@ -66,6 +66,9 @@
     "sodium.MixinSodiumRenderSectionManager",
     "sodium.MixinSodiumShaderLoader",
     "sodium.MixinSodiumViewport",
-    "sodium.MixinSodiumWorldRenderer"
+    "sodium.MixinSodiumWorldRenderer",
+    "voxy.MixinVoxyMipGen",
+    "voxy.MixinVoxyRenderDistanceTracker",
+    "voxy.MixinVoxyViewportSelector"
   ]
 }

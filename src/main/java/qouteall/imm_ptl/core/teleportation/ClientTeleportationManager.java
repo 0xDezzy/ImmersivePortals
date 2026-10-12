@@ -28,6 +28,7 @@ import qouteall.imm_ptl.core.api.PortalAPI;
 import qouteall.imm_ptl.core.collision.CollisionHelper;
 import qouteall.imm_ptl.core.collision.PortalCollisionHandler;
 import qouteall.imm_ptl.core.compat.GravityChangerInterface;
+import qouteall.imm_ptl.core.compat.IPVoxyCompat;
 import qouteall.imm_ptl.core.compat.sable.SableInterface;
 import qouteall.imm_ptl.core.ducks.IEAbstractClientPlayer;
 import qouteall.imm_ptl.core.ducks.IEClientPlayNetworkHandler;
@@ -418,6 +419,7 @@ public class ClientTeleportationManager {
         //because the teleportation may happen before rendering
         //but after pre render info being updated
         RenderStates.updatePreRenderInfo(partialTick);
+        IPVoxyCompat.requestViewportSwap(portal);
         
         if (teleportation.isDynamic()) {
             LOGGER.info(

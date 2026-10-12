@@ -308,9 +308,22 @@ configurations {
         canBeResolved = true
         transitive = false
     }
+    // Inspect Fabric Voxy's ABI without putting its newer Minecraft classes on our classpath.
+    voxyContract {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
+    roxyNetworkingContract {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
 }
 
 dependencies {
+    voxyContract "maven.modrinth:voxy:H3w2nVdU"
+    roxyNetworkingContract "org.sinytra.forgified-fabric-api:fabric-networking-api-v1:4.3.1+30a980d919"
     irisContract "maven.modrinth:iris:1.8.14-beta.1+1.21.1-neoforge"
     neoculusContract "maven.modrinth:neoculus:ZMibIRkN"
     implementation "net.neoforged:neoforge:${neo_version}"
@@ -368,6 +381,8 @@ tasks.named('test').configure {
     doFirst {
         systemProperty 'ip.irisJar', configurations.irisContract.singleFile.absolutePath
         systemProperty 'ip.neoculusJar', configurations.neoculusContract.singleFile.absolutePath
+        systemProperty 'ip.voxyJar', configurations.voxyContract.singleFile.absolutePath
+        systemProperty 'ip.roxyNetworkingJar', configurations.roxyNetworkingContract.singleFile.absolutePath
     }
 }
 

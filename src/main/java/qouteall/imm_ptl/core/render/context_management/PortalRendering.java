@@ -79,6 +79,11 @@ public class PortalRendering {
     public static @NotNull Portal getRenderingPortal() {
         return portalLayers.peek();
     }
+
+    /** Immutable outer-to-inner camera path, safe as a per-view cache key. */
+    public static List<Portal> getPortalPath() {
+        return List.copyOf(portalLayers);
+    }
     
     public static void onBeginPortalWorldRendering() {
         List<WeakReference<Portal>> currRenderInfo = portalLayers.stream().map(

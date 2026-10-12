@@ -43,6 +43,25 @@ Choose **one** terrain renderer. Shader loaders are optional client additions.
 
 Do not combine Sodium with Embeddium, or official Iris with NeOculus. Iris requires Sodium; NeOculus requires Embeddium. **Classic Oculus is not the supported NeOculus build.** Other Embeddium/NeOculus versions are rejected by the compatibility checks. Other Sodium/Iris versions and unlisted combinations are unverified. The tested Sable presence/absence above is coverage, not a requirement to add or remove Sable.
 
+### Roxy / Fabric Voxy (optional)
+
+This branch adds native NeoForge integration for **Roxy + Fabric Voxy 0.2.16-beta**
+([the Minecraft 1.21.11 artifact](https://modrinth.com/mod/voxy/version/H3w2nVdU)) on
+Minecraft **1.21.1**. Install Roxy, its required Forgified Fabric API, Sodium
+0.8.12+mc1.21.1, and the original Voxy jar separately. Connector is not required.
+Other Voxy versions are rejected when this integration is enabled.
+
+Portal cameras use separate, bounded temporal viewport caches and shared LOD
+requests. Same-dimension crossings promote destination state rather than throwing
+it away. Without active Iris shaders, normal mode automatically uses the
+**framebuffer compatibility renderer (one portal layer)**; explicit debug/disabled
+modes remain unchanged. With active Iris shaders, the existing Iris renderer is
+preserved, but Voxy shaderpack compatibility still depends on Roxy/Voxy and the pack.
+
+This is **not yet graphical acceptance coverage** for Voxy, dimension switching,
+or the combined Sable/Iris stack. See [setup, tests and remaining checks](docs/compat/roxy-voxy.md).
+Neither Roxy nor Voxy is bundled or redistributed.
+
 ### Shaderpacks
 
 Both of these unmodified packs passed graphical portal tests on **Iris + Sodium** and **NeOculus + Embeddium**:

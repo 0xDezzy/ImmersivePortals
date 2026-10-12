@@ -18,12 +18,16 @@ import qouteall.imm_ptl.core.CHelper;
 import qouteall.imm_ptl.core.ClientWorldLoader;
 import qouteall.imm_ptl.core.IPCGlobal;
 import qouteall.imm_ptl.core.IPGlobal;
+import qouteall.imm_ptl.core.IPMcHelper;
 import qouteall.imm_ptl.core.collision.CollisionHelper;
 import qouteall.imm_ptl.core.compat.IPModInfoChecking;
+import qouteall.imm_ptl.core.compat.IPVoxyCompat;
 import qouteall.imm_ptl.core.compat.iris_compatibility.ExperimentalIrisPortalRenderer;
 import qouteall.imm_ptl.core.compat.iris_compatibility.IrisCompatibilityPortalRenderer;
 import qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface;
 import qouteall.imm_ptl.core.compat.iris_compatibility.IrisPortalRenderer;
+import qouteall.imm_ptl.core.compat.voxy.VoxyCompatibility;
+import qouteall.imm_ptl.core.platform_specific.IPConfig;
 import qouteall.imm_ptl.core.portal.Mirror;
 import qouteall.imm_ptl.core.portal.Portal;
 import qouteall.imm_ptl.core.portal.global_portals.GlobalPortalStorage;
@@ -322,6 +326,7 @@ public abstract class PortalRenderer {
     public void onBeginIrisTranslucentRendering(Matrix4f modelView) {}
     
     private static boolean fabulousWarned = false;
+    private static boolean voxyWarned = false;
     
     public static void switchToCorrectRenderer() {
         if (PortalRendering.isRendering()) {
@@ -355,7 +360,19 @@ public abstract class PortalRenderer {
             }
         }
         
-        switch (IPGlobal.renderMode) {
+        IPGlobal.RenderMode effectiveMode = IPGlobal.renderMode;
+        if (VoxyCompatibility.needsFramebuffer(
+            IPVoxyCompat.isPresent(), false,
+            effectiveMode == IPGlobal.RenderMode.normal
+        )) {
+            effectiveMode = IPGlobal.RenderMode.compatibility;
+            if (!voxyWarned && IPConfig.getConfig().shouldDisplayWarning("voxy")) {
+                voxyWarned = true;
+                CHelper.printChat(Component.translatable("imm_ptl.voxy_warning")
+                    .append(IPMcHelper.getDisableWarningText("voxy")));
+            }
+        }
+        switch (effectiveMode) {
             case normal -> switchRenderer(IPCGlobal.rendererUsingStencil);
             case compatibility -> switchRenderer(IPCGlobal.rendererUsingFrameBuffer);
             case debug -> switchRenderer(IPCGlobal.rendererDebug);

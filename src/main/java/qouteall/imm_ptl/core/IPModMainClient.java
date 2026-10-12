@@ -9,6 +9,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import qouteall.imm_ptl.core.collision.CollisionHelper;
 import qouteall.imm_ptl.core.commands.ClientDebugCommand;
 import qouteall.imm_ptl.core.compat.IPFlywheelCompat;
+import qouteall.imm_ptl.core.compat.IPVoxyCompat;
 import qouteall.imm_ptl.core.compat.sodium_compatibility.SodiumInterface;
 import qouteall.imm_ptl.core.miscellaneous.DubiousThings;
 import qouteall.imm_ptl.core.miscellaneous.GcMonitor;
@@ -71,6 +72,7 @@ public class IPModMainClient {
     }
     
     public static void init() {
+        IPVoxyCompat.init();
         ClientWorldLoader.init();
         
         ClientTeleportationManager.init();
