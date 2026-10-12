@@ -41,6 +41,12 @@ public abstract class MixinChunkHolder implements IEChunkHolder {
     public void ip_retryFailedFutures(ChunkMap map, Executor executor) {
         // Vanilla updateFutures only recreates these on ticket-level transitions.
         // A retained portal ticket has no transition after a failed neighbor-range result.
+        // Read the vanilla fields, not overridden getters: C2ME clears these fields
+        // and owns promotion itself. Recovery skips absent fields without writing
+        // vanilla state back into C2ME's rewritten holder.
+        if (fullChunkFuture == null && tickingChunkFuture == null && entityTickingChunkFuture == null) {
+            return;
+        }
         FullChunkStatus status = ChunkLevel.fullStatus(getTicketLevel());
         if (status.isOrAfter(FullChunkStatus.FULL)) {
             var next = ChunkLoadingRecovery.retry(fullChunkFuture, () -> map.prepareAccessibleChunk((ChunkHolder) (Object) this));

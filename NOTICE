@@ -8,3 +8,8 @@ NsTut and contributors. Not affiliated with or endorsed by the original authors.
 
 Licensed under the Apache License, Version 2.0. See LICENSE in the source
 repository and LICENSE-Immersive-Portals in the distributed jar.
+
+The optional Voxy integration adapts the Apache-2.0 compatibility work in
+ImmersivePortalsMod-Updated (c7e751c3) by its contributors:
+https://github.com/DigitalWolf1313/ImmersivePortalsMod-Updated
+Voxy and Roxy are separate, optional installations; neither is redistributed here.

@@ -4,12 +4,22 @@ import net.minecraft.server.level.ChunkResult;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-/** Retry failed promotion results; pending/successful futures and exceptional IO remain untouched. */
+/** Retry failed vanilla promotion results without taking ownership of another chunk scheduler. */
 public final class ChunkLoadingRecovery {
     private ChunkLoadingRecovery() {}
 
+    /**
+     * C2ME's rewritten holders deliberately clear the vanilla future fields and
+     * supply their own futures through overridden getters. An absent future is
+     * not a failed promotion and must not start vanilla preparation work.
+     * Exceptional I/O remains visible rather than being converted into a retry.
+     */
+    public static <T> ChunkResult<T> peek(CompletableFuture<ChunkResult<T>> future) {
+        return future == null ? null : future.getNow(null);
+    }
+
     public static <T> boolean failed(CompletableFuture<ChunkResult<T>> future) {
-        ChunkResult<T> result = future.getNow(null);
+        ChunkResult<T> result = peek(future);
         return result != null && !result.isSuccess();
     }
 
@@ -35,7 +45,7 @@ public final class ChunkLoadingRecovery {
         public <T> boolean tick(
             CompletableFuture<ChunkResult<T>> entityFuture, long gameTime, Runnable retryFailedPromotion
         ) {
-            ChunkResult<T> result = entityFuture.getNow(null);
+            ChunkResult<T> result = peek(entityFuture);
             if (result == null) return false;
             if (result.isSuccess()) return true;
             if (!retry.scheduled()) {

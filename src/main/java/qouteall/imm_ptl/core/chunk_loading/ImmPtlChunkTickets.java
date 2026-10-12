@@ -372,9 +372,9 @@ public class ImmPtlChunkTickets {
                 return false;
             }
 
-            ChunkResult<LevelChunk> resultNow = (entityTickingRequired ? chunkHolder.getEntityTickingChunkFuture()
-                : chunkHolder.getTickingChunkFuture())
-                .getNow(null);
+            ChunkResult<LevelChunk> resultNow = ChunkLoadingRecovery.peek(
+                entityTickingRequired ? chunkHolder.getEntityTickingChunkFuture() : chunkHolder.getTickingChunkFuture()
+            );
             
             if (resultNow == null) {
                 return false;

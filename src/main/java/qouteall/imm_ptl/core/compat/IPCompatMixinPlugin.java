@@ -5,6 +5,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.service.MixinService;
+import qouteall.imm_ptl.core.compat.voxy.VoxyCompatibility;
 
 import java.util.List;
 import java.util.Set;
@@ -55,10 +56,18 @@ public class IPCompatMixinPlugin implements IMixinConfigPlugin {
 
 
         LoadingModList modList = LoadingModList.get();
+        if (mixinClassName.contains(".voxy.")) {
+            boolean applies = VoxyCompatibility.enabled(
+                modList.getModFileById("roxy") != null, modList.getModFileById("voxy") != null,
+                version(modList, "voxy")
+            );
+            if (applies) requireTarget(targetClassName, "Roxy / Voxy 0.2.16-beta");
+            return applies;
+        }
         if (mixinClassName.contains(".fabric.")) {
             if (modList.getModFileById("fabric_networking_api_v1") == null) return false;
             FabricReceiverRegistration.checkVersion(version(modList, "fabric_networking_api_v1"));
-            requireTarget(targetClassName, "Forgified Fabric networking 4.2.2+a92978fd19");
+            requireTarget(targetClassName, "Forgified Fabric networking " + version(modList, "fabric_networking_api_v1"));
             return true;
         }
         if (mixinClassName.contains(".iris.") || mixinClassName.contains(".sodium.")
