@@ -65,7 +65,8 @@ JUnit covers full-path cache isolation, LRU eviction, one-way and unseen
 destinations, reverse crossings, exactly-once cleanup, shared LOD ownership,
 pending request cancellation, radius changes, negative coordinates, expiry,
 processing budgets, a randomized independent camera-union model, optional-mod
-gates and renderer fallback policy.
+gates, renderer fallback policy, chunk-promotion recovery against rewritten
+chunk holders, and release-jar launcher metadata.
 Contract tests inspect the pinned original Voxy jar using ASM; `voxyContract`
 is test-only and never added to the game classpath or release jar. They check
 selector/tracker descriptors, mip scratch field reads, client-only pseudo mixin
@@ -74,7 +75,7 @@ The separate `roxyNetworkingContract` compares all registration/dispatch method
 bytecode against the older module exercised by CE's concurrency tests. Only the
 upstream native-map constructor changes from HashMap to ConcurrentHashMap.
 
-Build result: **215 JUnit tests passed, two platform-specific reader-lock tests
+Build result: **220 JUnit tests passed, two platform-specific reader-lock tests
 skipped, no failures**. The release jar contains no Roxy/Voxy classes or GameTest
 drivers.
 
@@ -91,6 +92,56 @@ live coverage. Existing CE renderer certification is not Voxy certification.
 The separate `coreCheck -PverificationSable=false` attempt reached the GameTest
 server but failed on missing `sable:physicstest.gravity` fixture data. It is not
 reported as a passing GameTest run; the ordinary `build`/JUnit command above passes.
+
+## Chunk promotion with rewritten chunk schedulers
+
+Independent of Voxy, the report from
+`crash-reports/crash-2026-10-11_21.15.29-server.txt` in a C2ME
+`0.4.0-alpha.0.122+1.21.1` instance showed a server-side
+`NullPointerException: Cannot invoke CompletableFuture.getNow(Object) because
+future is null` in `ChunkLoadingRecovery.failed`, reached through
+`ChunkHolder.ip_retryFailedFutures` and `ImmPtlChunkTickets.flushThrottling`.
+
+C2ME's `c2me-rewrites-chunk-system` replaces the vanilla `ChunkHolder` promotion
+futures. Its `failFastIncompatibility` mixin constructor clears the raw
+`accessibleFuture`, `tickingFuture` and `entityTickingFuture` fields and the
+holder overrides `getAccessibleFuture()`/`getTickingFuture()` to return
+scheduler-owned futures. CE reads those raw Mojang fields directly, so after C2ME
+the fields are `null` and the old code called `getNow(null)` on them.
+
+CE now treats an absent vanilla future as "not a failed promotion" rather than
+dereferencing it: a null-safe `ChunkLoadingRecovery.peek` helper is used by the
+failed checks and the entity-promotion tick, and `ip_retryFailedFutures` returns
+early when all three raw futures are null so it leaves promotion to the owning
+scheduler. CE deliberately keeps reading the raw fields instead of the getters,
+because writing vanilla state back through the overridden getters would install
+vanilla futures inside a C2ME-owned holder. The exact crash is covered by JUnit
+without launching Minecraft; an in-game retest with C2ME is still recommended.
+
+## Launcher mod metadata
+
+On some launchers the mod appeared as the raw filename `immersive_portals-6.1.0`
+instead of "Immersive Portals - CE". The in-game mod list was always correct:
+`neoforge.mods.toml` has declared the `displayName` for all three entry points
+all along.
+
+The cause was packaging, not metadata. An empty `src/main/resources/fabric.mod.json`
+(0 bytes, added by an old upstream sync commit and no longer referenced by the
+build) was packaged *before* `META-INF/neoforge.mods.toml`. Launchers such as
+PrismLauncher scan the jar's metadata entries in order and stop at the first
+recognised one; parsing an empty `fabric.mod.json` yields an empty name and the
+launcher falls back to the filename, so the real NeoForge metadata was never read.
+The empty file has been removed, and a regression test asserts the release jar
+carries no launcher metadata that could preempt `neoforge.mods.toml`
+(`fabric.mod.json`, `quilt.mod.json`, `forgeversion.properties`, `litemod.json`,
+`META-INF/nil/mappings.json` or `*.nilmod.css`).
+
+Metadata was also hardened: the jar manifest now carries `Implementation-` and
+`Specification-Title/Version/Vendor`, the correctly spelled top-level
+`issueTrackerURL` is used in `neoforge.mods.toml`, the resource pack description
+matches the mod name, and a generated `mcmod.info` provides the same descriptive
+fields for legacy launchers. `ModMetadataTest` asserts all of this against the
+actual release jar.
 
 ## Remaining graphical acceptance checks
 

@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.junit.jupiter.api.Test;
+import qouteall.imm_ptl.core.mixin.common.chunk_sync.MixinChunkHolder;
 import java.util.concurrent.*;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,39 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ChunkLoadingRecoveryTest {
+    @Test void absentVanillaFutureIsNotAFailedPromotion() {
+        assertNull(ChunkLoadingRecovery.peek(null));
+        assertFalse(ChunkLoadingRecovery.failed(null));
+        assertNull(ChunkLoadingRecovery.retry(null, () -> {
+            fail("a scheduler-owned holder must not restart vanilla preparation");
+            return null;
+        }));
+    }
+
+    @Test void rewrittenHolderWithNullVanillaFuturesLeavesPromotionsToItsOwner() {
+        // Model C2ME's NewChunkHolderVanillaInterface: all three inherited
+        // vanilla futures are null even at entity-ticking ticket level 31.
+        var holder = new MixinChunkHolder() {
+            @Override public int getTicketLevel() { return 31; }
+        };
+        assertDoesNotThrow(() -> holder.ip_retryFailedFutures(null, Runnable::run));
+    }
+
+    @Test void absentEntityFutureDoesNotScheduleOrPostponeRecovery() {
+        var monitor = new ChunkLoadingRecovery.DeliveredEntityPromotion();
+        Runnable unexpectedRetry = () -> fail("an absent entity future must not request vanilla promotion");
+        assertFalse(monitor.tick(null, 100, unexpectedRetry));
+        assertFalse(monitor.tick(null, 120, unexpectedRetry));
+
+        var failed = CompletableFuture.<ChunkResult<String>>completedFuture(ChunkResult.error("unloaded neighbors"));
+        assertFalse(monitor.tick(failed, 150, unexpectedRetry));
+        assertFalse(monitor.tick(null, 169, unexpectedRetry));
+        var retries = new AtomicInteger();
+        assertFalse(monitor.tick(failed, 170, retries::incrementAndGet));
+        assertEquals(1, retries.get(), "an absent observation must not reset an existing retry cooldown");
+        assertTrue(monitor.tick(CompletableFuture.completedFuture(ChunkResult.of("ready")), 171, unexpectedRetry));
+    }
+
     @Test void failedNeighborRangeRequeuesUntilItRecoversWithoutReplacingSuccess() {
         CompletableFuture<ChunkResult<String>> future = CompletableFuture.completedFuture(ChunkResult.error("unloaded neighbors"));
         var attempts = new AtomicInteger();

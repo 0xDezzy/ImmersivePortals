@@ -95,6 +95,16 @@ base {
 }
 
 tasks.named('jar', Jar).configure {
+    manifest {
+        attributes(
+            'Implementation-Title': mod_name,
+            'Implementation-Version': mod_version,
+            'Implementation-Vendor': mod_authors,
+            'Specification-Title': mod_name,
+            'Specification-Version': mod_version,
+            'Specification-Vendor': mod_authors
+        )
+    }
     from(rootProject.file('LICENSE')) {
         rename { 'LICENSE-Immersive-Portals' }
     }
@@ -377,8 +387,10 @@ dependencies {
 }
 
 tasks.named('test').configure {
+    dependsOn tasks.named('jar')
     useJUnitPlatform()
     doFirst {
+        systemProperty 'ip.modJar', tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath
         systemProperty 'ip.irisJar', configurations.irisContract.singleFile.absolutePath
         systemProperty 'ip.neoculusJar', configurations.neoculusContract.singleFile.absolutePath
         systemProperty 'ip.voxyJar', configurations.voxyContract.singleFile.absolutePath
@@ -403,6 +415,16 @@ tasks.withType(ProcessResources).configureEach {
             loader_version_range: loader_version_range,
             mod_id              : mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
             mod_authors         : mod_authors, mod_description: mod_description, pack_format_number: pack_format_number,
+            // Older launchers may only inspect mcmod.info. This is descriptive
+            // metadata, not a Forge or Fabric loader entrypoint. mod_authors ends
+            // with a "and contributors" clause rather than a name, so drop it here;
+            // mod_credits below still records that attribution.
+            launcher_metadata_json: groovy.json.JsonOutput.toJson([
+                modid: 'immersive_portals_core', name: mod_name, version: mod_version,
+                mcversion: minecraft_version, description: mod_description, url: display_url,
+                authorList: mod_authors.split(',').collect { it.trim() }.findAll { !it.toLowerCase().startsWith('and ') },
+                credits: mod_credits, logoFile: 'icon.png'
+            ]),
     ]
     inputs.properties replaceProperties
 
@@ -412,7 +434,7 @@ tasks.withType(ProcessResources).configureEach {
         rename { 'icon.png' }
     }
 
-    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta', 'mcmod.info']) {
         expand replaceProperties + [project: project]
     }
 }

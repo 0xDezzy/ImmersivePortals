@@ -6,7 +6,7 @@ loaderVersion="${loader_version_range}"
 # The license for you mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
 license="${mod_license}"
 # A URL to refer people to when problems occur with this mod
-issue_tracker_url="${issue_tracker_url}"
+issueTrackerURL="${issue_tracker_url}"
 # A list of mods - how many allowed here is determined by the individual mod loader
 [[mods]] #mandatory
 # The modid of the mod

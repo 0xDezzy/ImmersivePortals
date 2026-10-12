@@ -25,6 +25,8 @@ This repository maintains the Minecraft 1.21.1 NeoForge build derived from [qout
 
 The Fabric project is maintained separately by the original Immersive Portals team. This repository produces the NeoForge jar only.
 
+The jar ships NeoForge metadata only: `META-INF/neoforge.mods.toml` (display name "Immersive Portals - CE"), a generated `mcmod.info` for legacy launchers, and no leftover Fabric/Forge descriptor that could make a launcher fall back to showing the filename.
+
 ## Mod compatibility
 
 These are **Minecraft 1.21.1 / NeoForge** targets for this CE build, not a promise of compatibility with every version or modpack. Optional mods below are not required for ordinary portals. Use the listed versions when reproducing a problem.
@@ -81,6 +83,7 @@ Tests repeat after resource reload, resize and shader disable/enable. These resu
 | **Create 6.0.10-280 / Flywheel 1.0.6** | Create blocks and contraptions remain visible and clipped through portals; rotating machinery and block-breaking overlays are tested. | Portal, alternate-world and clipped views use Create's vanilla rendering fallback. A main view with a portal-colliding entity also falls back for that view; otherwise the selected Flywheel backend is preserved. Off, instancing and indirect have graphical coverage, not a universal hardware/FPS guarantee. |
 | **Veil 4.3.2** | Keeps portal clipping working when Veil recompiles Minecraft shaders, so geometry does not leak across the portal plane. | Tested as standalone Veil with Sodium and without Sable; Sable's bundled Veil is also exercised in Sable lanes. This does not certify every mod using Veil. |
 | **owo-lib 0.12.15-beta.12+1.21 / Forgified Fabric networking 4.2.2+a92978fd19** | Protects parallel packet registration from races that can break startup or login in mixed-mod installations. | Targeted concurrency tests and the runtime stack cover the pinned networking module bundled by owo-lib. Other versions of that module are rejected; this is not general Fabric-mod support. |
+| **C2ME 0.4.0-alpha.0.122+1.21.1** | Chunk promotion recovery no longer dereferences the vanilla `ChunkHolder` futures that C2ME's rewritten chunk system clears, so C2ME owns promotion instead of crashing the tick loop. | Fixed from a user crash report and covered by unit tests that do not launch Minecraft. An in-game run with C2ME is not yet part of the automated harness, and mods that rewrite the chunk scheduler differently are unverified. |
 
 ### Limited or unverified support
 
@@ -91,7 +94,7 @@ Tests repeat after resource reload, resize and shader disable/enable. These resu
 - **Requiem and Cardinal Components** have optional source hooks, but no verified Minecraft 1.21.1 NeoForge runtime combination here. **Aeronautics, Simulated and Offroad** are local-development inputs without reproducible hosted-CI coverage.
 - Mods or versions not listed here are **unverified**, rather than automatically compatible or incompatible. This jar is not a Fabric or legacy Forge build.
 
-For exact artifacts and technical limits, see the [renderer contract](docs/renderer-backends.md), [Create/Flywheel audit](docs/compat/flywheel-1.0.6.md) and [networking audit](docs/compat/fabric-network-registration.md). The [verified integration CI run](https://github.com/UpperMoon0/ImmersivePortals/actions/runs/38136969940) records the tested combinations; it does not cover every possible cross-combination.
+For exact artifacts and technical limits, see the [renderer contract](docs/renderer-backends.md), [Create/Flywheel audit](docs/compat/flywheel-1.0.6.md), [networking audit](docs/compat/fabric-network-registration.md) and [Roxy/Voxy integration notes](docs/compat/roxy-voxy.md). The [verified integration CI run](https://github.com/UpperMoon0/ImmersivePortals/actions/runs/38136969940) records the tested combinations; it does not cover every possible cross-combination.
 
 ## Building and verification
 
